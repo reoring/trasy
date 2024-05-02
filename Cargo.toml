@@ -2,8 +2,11 @@
 name = "trasy"
 version = "0.1.0"
 edition = "2021"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+description = "A library for error handling with tracing and backtrace support"
+license = "Apache-2.0"
+repository = "https://github.com/reoring/trasy"
+keywords = ["error-handling", "tracing", "backtrace"]
+categories = ["development-tools::debugging", "no-std"]
 
 [dependencies]
 tracing = "0.1.40"
