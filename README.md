@@ -17,6 +17,34 @@ Add `Trasy` to your Cargo.toml:
 trasy = "0.1.0"  # Use the latest version
 ```
 
+
+## Environment Setup and Instrumentation
+
+### Enabling Backtrace
+
+To fully utilize the backtrace functionality in Rust, you need to set the `RUST_BACKTRACE` environment variable. This can be done by running your application with the variable set to `1`:
+
+```bash
+RUST_BACKTRACE=1 cargo run
+```
+
+This setting tells Rust to capture detailed backtraces when errors occur.
+
+### Using `#[instrument]` with Tracing
+
+To enhance the diagnostics of your Rust applications, use the `#[instrument]` attribute from the `tracing` crate. This attribute automatically instruments your functions, recording the entry and exit of calls, and captures arguments to the functions:
+
+```rust
+use tracing::instrument;
+
+#[instrument]
+fn compute_value(x: i32, y: i32) -> i32 {
+    x + y
+}
+```
+
+Using `#[instrument]` provides valuable insights into function calls and can be coupled with error handling to trace error sources more effectively.
+
 ## User Outcome
 
 Using `TrasyError`, developers can get and read both span trace and backtrace simultaneously, providing a dual-layer of error context that enhances debugging capabilities. The output when an error occurs would look something like this:
