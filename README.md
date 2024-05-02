@@ -14,7 +14,7 @@ Add `Trasy` to your Cargo.toml:
 
 ```toml
 [dependencies]
-trasy_error = "0.1.0"  # Use the latest version
+trasy = "0.1.0"  # Use the latest version
 ```
 
 ## Usage
@@ -24,13 +24,13 @@ trasy_error = "0.1.0"  # Use the latest version
 To use `Trasy`, first import it along with its macros:
 
 ```rust
-use trasy_error::{Trasy, error, bail};
+use trasy::{TrasyError, error, bail};
 ```
 
 Create and propagate errors easily using the `error!` macro:
 
 ```rust
-fn example_function() -> Result<(), Trasy<String>> {
+fn example_function() -> Result<(), TrasyError<String>> {
     let some_result = some_error_prone_operation();
 
     some_result.map_err(|e| error!(e))
@@ -42,7 +42,7 @@ fn example_function() -> Result<(), Trasy<String>> {
 To attach a backtrace to your error, simply use the error in a context where the backtrace will be captured:
 
 ```rust
-fn example_function() -> Result<(), Trasy<String>> {
+fn example_function() -> Result<(), TrasyError<String>> {
     let some_result = another_error_prone_operation();
     some_result.map_err(|e| bail!(e))
 }
