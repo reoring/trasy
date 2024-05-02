@@ -17,6 +17,29 @@ Add `Trasy` to your Cargo.toml:
 trasy = "0.1.0"  # Use the latest version
 ```
 
+## User Outcome
+
+Using `TrasyError`, developers can get and read both span trace and backtrace simultaneously, providing a dual-layer of error context that enhances debugging capabilities. The output when an error occurs would look something like this:
+
+**Error Context:**
+
+```
+An error occurred:
+Error Context:
+   0: tracing::foo
+             at src/main.rs:158
+   1: tracing::bar
+           with hoge="hoge"
+             at src/main.rs:153
+```
+
+**Backtrace:**
+
+```
+Backtrace:
+Backtrace [{ fn: "tracing::foo::{{closure}}", file: "./src/main.rs", line: 163 }, { fn: "tracing::foo", file: "./src/main.rs", line: 158 }, { fn: "tracing::bar", file: "./src/main.rs", line: 155 }, ...]
+```
+
 ## Usage
 
 ### Basic Usage

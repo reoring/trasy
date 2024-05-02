@@ -1,6 +1,6 @@
 [package]
 name = "trasy"
-version = "0.1.1"
+version = "0.1.2"
 edition = "2021"
 description = "A library for error handling with tracing and backtrace support"
 license = "Apache-2.0"
