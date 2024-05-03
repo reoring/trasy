@@ -1,7 +1,15 @@
+use opentelemetry::KeyValue;
+use opentelemetry_otlp::SpanExporterBuilder;
+use opentelemetry_otlp::WithExportConfig;
+use opentelemetry_sdk::trace;
+use opentelemetry_sdk::trace::Tracer;
+use opentelemetry_sdk::Resource;
+use std::backtrace::Backtrace;
 use std::error::Error;
 use std::fmt;
-use std::backtrace::Backtrace;
 use tracing_error::SpanTrace;
+use tracing_opentelemetry::OpenTelemetryLayer;
+use tracing_subscriber::Registry;
 
 #[derive(Debug)]
 pub struct TrasyError<T> {
@@ -53,4 +61,72 @@ macro_rules! bail {
     ($e:expr) => {
         Err(TrasyError::new($e).with_backtrace(std::backtrace::Backtrace::capture()))
     };
+}
+
+struct TelemetryConfig {
+    service_name: String,
+    #[allow(dead_code)]
+    endpoint: String,
+    use_batch: bool, // Determine whether to use batch or simple span processing
+    oltp_exporter: Option<SpanExporterBuilder>,
+}
+
+impl TelemetryConfig {
+    #[allow(dead_code)]
+    pub fn with_oltp_exporter<B: Into<SpanExporterBuilder>>(mut self, exporter: B) -> Self {
+        self.oltp_exporter = Some(exporter.into());
+        self
+    }
+}
+
+impl Default for TelemetryConfig {
+    fn default() -> Self {
+        let endpoint = "http://localhost:4318";
+
+        let otlp_exporter = opentelemetry_otlp::new_exporter()
+            .http()
+            .with_endpoint(endpoint);
+
+        Self {
+            service_name: "default-service".to_string(),
+            endpoint: endpoint.to_string(),
+            use_batch: true,
+            oltp_exporter: Some(otlp_exporter.into()),
+        }
+    }
+}
+
+#[allow(dead_code)]
+async fn setup_opentelemetry(
+    config: TelemetryConfig,
+) -> Result<OpenTelemetryLayer<Registry, Tracer>, TrasyError<std::io::Error>> {
+    let Some(exporter) = config.oltp_exporter else {
+        return Err(TrasyError::new(std::io::Error::new(
+            std::io::ErrorKind::InvalidInput,
+            "oltp_exporter is None",
+        )));
+    };
+
+    let service_name = config.service_name;
+
+    let builder = opentelemetry_otlp::new_pipeline()
+        .tracing()
+        .with_exporter(exporter)
+        .with_trace_config(
+            trace::config().with_resource(Resource::new(vec![KeyValue::new(
+                "service.name",
+                service_name,
+            )])),
+        );
+
+    let tracer = if config.use_batch {
+        builder.install_batch(opentelemetry_sdk::runtime::Tokio)
+    } else {
+        builder.install_simple()
+    }
+    .expect("Error initializing OpenTelemetry exporter");
+
+    let opentelemetry: OpenTelemetryLayer<Registry, Tracer> =
+        tracing_opentelemetry::layer().with_tracer(tracer);
+    Ok(opentelemetry)
 }

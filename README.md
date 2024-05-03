@@ -172,6 +172,166 @@ fn main() {
 }
 ```
 
+## OpenTelemetry Integration
+
+`Trasy` supports OpenTelemetry, allowing you to trace your applications and export telemetry data to your chosen backend (e.g., Jaeger, Zipkin). This section describes how to configure and use OpenTelemetry in your application.
+
+### Configuration
+
+To use OpenTelemetry with `TrasyError`, you first need to set up the telemetry configuration. Here's how you can configure and enable telemetry:
+
+#### 1. Define the Configuration
+
+Configure the telemetry settings using the `TelemetryConfig` struct. You can specify the service name, the endpoint, whether to use batch or simple span processing, and optionally, a custom span exporter.
+
+```rust
+use trasy_error::TelemetryConfig;
+
+let config = TelemetryConfig {
+    service_name: "my-awesome-service".to_string(),
+    endpoint: "http://my-telemetry-collector:4318".to_string(),
+    use_batch: true,
+    oltp_exporter: None, // Use default OTLP exporter
+};
+```
+
+#### 2. Set Up OpenTelemetry
+
+Pass the configuration to the `setup_opentelemetry` function to initialize the telemetry. This function sets up the tracing layer that you can then use with the `tracing` subscriber.
+
+```rust
+use trasy_error::setup_opentelemetry;
+
+let telemetry_layer = setup_opentelemetry(config).await.expect("Failed to set up OpenTelemetry");
+
+// Now you can use `telemetry_layer` with your tracing subscriber setup
+```
+
+### Example: Full Setup with Tracing Subscriber
+
+Here is a complete example that shows how to set up tracing using `trasy_error` with OpenTelemetry and `tracing_subscriber`.
+
+```rust
+use trasy_error::{TelemetryConfig, setup_opentelemetry};
+use tracing_subscriber::{layer::SubscriberExt, Registry};
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let config = TelemetryConfig::default().with_oltp_exporter(
+        opentelemetry_otlp::new_exporter().http().with_endpoint("http://localhost:4318")
+    );
+
+    let telemetry_layer = setup_opentelemetry(config).await?;
+
+    let subscriber = Registry::default()
+        .with(telemetry_layer)
+        .with(tracing_subscriber::fmt::layer());
+
+    tracing::subscriber::set_global_default(subscriber)?;
+
+    // Your application code here
+    tracing::info!("Application started");
+
+    Ok(())
+}
+```
+
+### Custom Exporters
+
+If you need to use a custom exporter, configure it as part of your `TelemetryConfig`:
+
+```rust
+let custom_exporter = opentelemetry_otlp::new_exporter()
+    .grpc()
+    .with_endpoint("my-custom-endpoint:4317");
+
+let config = TelemetryConfig {
+    service_name: "my-service".to_string(),
+    use_batch: false,
+    oltp_exporter: Some(custom_exporter.into()),
+    ..Default::default()
+};
+```
+
+### Note
+
+- Make sure your OpenTelemetry collector or backend is properly configured to receive telemetry data from your application.
+- Adjust the OpenTelemetry setup according to your specific environment needs and the OpenTelemetry SDK documentation.
+
+This integration allows `TrasyError` to be a powerful tool in not only handling errors but also in observing and diagnosing them in distributed systems.
+
+Certainly! To incorporate the usage of your Docker setup with Jaeger into the `README.md`, you can provide a detailed guide on how to run the Jaeger instance using Docker and how to connect it with your application. Below is the section you can add to your `README.md` to cover this:
+
+---
+
+## Integrating Jaeger for Tracing Visualization
+
+`Trasy` is configured to work seamlessly with Jaeger, a distributed tracing system. By using the provided Docker configuration, you can easily set up a Jaeger instance to visualize traces collected from your application. Here's how to get started:
+
+### Setting Up Jaeger with Docker
+
+To start the Jaeger container which will collect and visualize your application's tracing data, follow these steps:
+
+1. Ensure Docker and Docker Compose are installed on your system. For installation instructions, see [Docker](https://docs.docker.com/get-docker/) and [Docker Compose](https://docs.docker.com/compose/install/).
+2. Create a `docker-compose.yml` file with the following content:
+
+    ```yaml
+    version: '3.8'
+
+    services:
+      jaeger:
+        image: jaegertracing/all-in-one:1.56
+        container_name: jaeger
+        ports:
+          - "6831:6831/udp"   # Jaeger Thrift Compact Protocol
+          - "6832:6832/udp"   # Jaeger Thrift Binary Protocol
+          - "16686:16686"     # Jaeger UI
+          - "14268:14268"     # Jaeger HTTP collector
+          - "4317:4317"       # OTLP gRPC port
+          - "4318:4318"       # OTLP gRPC http port
+        environment:
+          - COLLECTOR_OTLP_ENABLED=true
+    ```
+
+3. Run the following command in the directory where your `docker-compose.yml` is located:
+
+    ```bash
+    docker-compose up -d
+    ```
+
+   This command will download the Jaeger image and start the Jaeger service.
+
+### Connecting Your Application to Jaeger
+
+To send traces from your application to Jaeger, configure the `TelemetryConfig` to use the correct endpoint. Here’s an example using the default setup provided in the Docker configuration:
+
+```rust
+let config = TelemetryConfig {
+    service_name: "my-awesome-service".to_string(),
+    endpoint: "http://localhost:4318",
+    use_batch: true,
+    oltp_exporter: None, // This will use the default OTLP HTTP exporter
+};
+
+let telemetry_layer = setup_opentelemetry(config).await.expect("Failed to set up OpenTelemetry");
+```
+
+### Viewing Traces in Jaeger
+
+After running your application configured to send traces to Jaeger, you can view these traces by:
+
+1. Opening a web browser.
+2. Navigating to `http://localhost:16686`.
+
+This URL is the Jaeger UI, where you can query and visualize traces collected from your application.
+
+### Note
+
+- Make sure the port numbers in the Jaeger Docker setup match those expected by your application’s telemetry configuration.
+- If running within different Docker networks or on different machines, ensure network connectivity between your application and the Jaeger service.
+
+This setup provides a powerful way to visualize and debug the behavior of your distributed applications.
+
 ## Contributing
 
 Contributions to `Trasy` are welcome! Here are some ways you can contribute:

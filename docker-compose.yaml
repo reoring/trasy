@@ -1,0 +1,15 @@
+version: '3.8'
+
+services:
+  jaeger:
+    image: jaegertracing/all-in-one:1.56
+    container_name: jaeger
+    ports:
+      - "6831:6831/udp"   # Jaeger Thrift Compact Protocol
+      - "6832:6832/udp"   # Jaeger Thrift Binary Protocol
+      - "16686:16686"     # Jaeger UI
+      - "14268:14268"     # Jaeger HTTP collector
+      - "4317:4317"       # OTLP gRPC port
+      - "4318:4318"       # OTLP gRPC http port
+    environment:
+      - COLLECTOR_OTLP_ENABLED=true
